@@ -1,43 +1,86 @@
 #!/bin/bash
 
-if test $# -ne 1; then
-    echo "Usage: $0 <top-folder>" 1>&2
+# Generate summary CSV files from processed evaluation data
+#
+# Usage:
+#   ./all-extract <top-folder>
+
+set -e
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <top-folder>" >&2
     exit 1
 fi
 
 top="$1"
 
-if test ! -d "$top"; then
-    echo "Error: Folder $top does not exist or is not a folder." 1>&2
+if [ ! -d "$top" ]; then
+    echo "Error: Folder '$top' does not exist or is not a directory." >&2
     exit 1
 fi
 
-./extract_average "$top"/processed/entire/ > "$top"/summary/entire.csv
-./extract_average "$top"/processed/per-semester/ > "$top"/summary/per-semester.csv
-./extract_average "$top"/processed/per-series/ > "$top"/summary/per-series.csv
-./extract_average "$top"/processed/common/ > "$top"/summary/common.csv
-./extract_average "$top"/processed/raw/ > "$top"/summary/raw.csv
-sed -n '/^"Titulari Curs"/,/^"Total:"/p' "$top"/processed/entire/all.csv | tail -n +2 | head -n -1 > "$top"/summary/prof.csv
-sed -n '/^"Asisten/,/^"Total:"/p' "$top"/processed/entire/all.csv | tail -n +2 | head -n -1 > "$top"/summary/asist.csv
-for i in "$top"/processed/raw/*.csv; do c="$(basename "$i" .csv)"; cat "$i" | sed -n '/^"Titulari Curs"/,/^"Total:"/p' | tail -n +2 | head -n -1 | sed 's/^/"'"$c"'",/'; done > "$top"/summary/prof_courses.csv
-for i in "$top"/processed/raw/*.csv; do c="$(basename "$i" .csv)"; cat "$i" | sed -n '/^"Asisten/,/^"Total:"/p' | tail -n +2 | head -n -1 | sed 's/^/"'"$c"'",/'; done > "$top"/summary/asist_courses.csv
+# Generate average CSV summaries for a processed dataset.
+generate_averages() {
+    local input="$1"
+    local output="$2"
 
-./extract_average "$top"/sep-processed/cti/entire/ > "$top"/summary/cti/entire.csv
-./extract_average "$top"/sep-processed/cti/per-semester/ > "$top"/summary/cti/per-semester.csv
-./extract_average "$top"/sep-processed/cti/per-series/ > "$top"/summary/cti/per-series.csv
-./extract_average "$top"/sep-processed/cti/common/ > "$top"/summary/cti/common.csv
-./extract_average "$top"/sep-processed/cti/raw/ > "$top"/summary/cti/raw.csv
-sed -n '/^"Titulari Curs"/,/^"Total:"/p' "$top"/sep-processed/cti/entire/all.csv | tail -n +2 | head -n -1 > "$top"/summary/cti/prof.csv
-sed -n '/^"Asisten/,/^"Total:"/p' "$top"/sep-processed/cti/entire/all.csv | tail -n +2 | head -n -1 > "$top"/summary/cti/asist.csv
-for i in "$top"/sep-processed/cti/raw/*.csv; do c="$(basename "$i" .csv)"; cat "$i" | sed -n '/^"Titulari Curs"/,/^"Total:"/p' | tail -n +2 | head -n -1 | sed 's/^/"'"$c"'",/'; done > "$top"/summary/cti/prof_courses.csv
-for i in "$top"/sep-processed/cti/raw/*.csv; do c="$(basename "$i" .csv)"; cat "$i" | sed -n '/^"Asisten/,/^"Total:"/p' | tail -n +2 | head -n -1 | sed 's/^/"'"$c"'",/'; done > "$top"/summary/cti/asist_courses.csv
+    ./extract_average "$input/entire/" > "$output/entire.csv"
+    ./extract_average "$input/per-semester/" > "$output/per-semester.csv"
+    ./extract_average "$input/per-series/" > "$output/per-series.csv"
+    ./extract_average "$input/common/" > "$output/common.csv"
+    ./extract_average "$input/raw/" > "$output/raw.csv"
+}
 
-./extract_average "$top"/sep-processed/is/entire/ > "$top"/summary/is/entire.csv
-./extract_average "$top"/sep-processed/is/per-semester/ > "$top"/summary/is/per-semester.csv
-./extract_average "$top"/sep-processed/is/per-series/ > "$top"/summary/is/per-series.csv
-./extract_average "$top"/sep-processed/is/common/ > "$top"/summary/is/common.csv
-./extract_average "$top"/sep-processed/is/raw/ > "$top"/summary/is/raw.csv
-sed -n '/^"Titulari Curs"/,/^"Total:"/p' "$top"/sep-processed/is/entire/all.csv | tail -n +2 | head -n -1 > "$top"/summary/is/prof.csv
-sed -n '/^"Asisten/,/^"Total:"/p' "$top"/sep-processed/is/entire/all.csv | tail -n +2 | head -n -1 > "$top"/summary/is/asist.csv
-for i in "$top"/sep-processed/is/raw/*.csv; do c="$(basename "$i" .csv)"; cat "$i" | sed -n '/^"Titulari Curs"/,/^"Total:"/p' | tail -n +2 | head -n -1 | sed 's/^/"'"$c"'",/'; done > "$top"/summary/is/prof_courses.csv
-for i in "$top"/sep-processed/is/raw/*.csv; do c="$(basename "$i" .csv)"; cat "$i" | sed -n '/^"Asisten/,/^"Total:"/p' | tail -n +2 | head -n -1 | sed 's/^/"'"$c"'",/'; done > "$top"/summary/is/asist_courses.csv
+# Extract professor and assistant sections from the combined CSV.
+extract_staff() {
+    local csv="$1"
+    local output="$2"
+
+    sed -n '/^"Titulari Curs"/,/^"Total:"/p' "$csv" \
+        | tail -n +2 \
+        | head -n -1 \
+        > "$output/prof.csv"
+
+    sed -n '/^"Asisten/,/^"Total:"/p' "$csv" \
+        | tail -n +2 \
+        | head -n -1 \
+        > "$output/asist.csv"
+}
+
+# Build per-course professor and assistant summaries.
+extract_course_staff() {
+    local raw_dir="$1"
+    local output="$2"
+
+    > "$output/prof_courses.csv"
+    > "$output/asist_courses.csv"
+
+    for file in "$raw_dir"/*.csv; do
+        course=$(basename "$file" .csv)
+
+        sed -n '/^"Titulari Curs"/,/^"Total:"/p' "$file" \
+            | tail -n +2 \
+            | head -n -1 \
+            | sed "s/^/\"$course\",/" \
+            >> "$output/prof_courses.csv"
+
+        sed -n '/^"Asisten/,/^"Total:"/p' "$file" \
+            | tail -n +2 \
+            | head -n -1 \
+            | sed "s/^/\"$course\",/" \
+            >> "$output/asist_courses.csv"
+    done
+}
+
+process_dataset() {
+    local input="$1"
+    local output="$2"
+
+    generate_averages "$input" "$output"
+    extract_staff "$input/entire/all.csv" "$output"
+    extract_course_staff "$input/raw" "$output"
+}
+
+process_dataset "$top/processed" "$top/summary"
+process_dataset "$top/sep-processed/cti" "$top/summary/cti"
+process_dataset "$top/sep-processed/is" "$top/summary/is"

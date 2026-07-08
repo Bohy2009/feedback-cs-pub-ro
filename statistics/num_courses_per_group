@@ -1,17 +1,37 @@
 #!/bin/bash
 
+
 if test $# -ne 1; then
     echo "Usage: $0 <json-folder>" 1>&2
     exit 1
 fi
 
-in="$1"
+input="$1"
 
+# Files larger than this threshold are considered non-empty
 limit=100
-total=$(ls -1q "$in"/{L,M}-*.json | wc -l)
-total_non_zero=$(find "$in" -name [LM]-*.json -size +"$limit"c | wc -l)
-total_generic=$(grep -lr "Generic GENERIC" "$in"/[LM]-*.json 2> /dev/null | wc -l)
-total_known=$(($total_non_zero-$total_generic))
+
+# CTI series used to separate CTI and IS courses
+cti_series=(
+    "CA" "CB" "CC" "CD"
+    "C1" "C2" "C3" "C4"
+    "Tehnologia informaţiei"
+    "CTI"
+    "AAC" "ABD" "eGuv" "G"
+    "GMRV" "IA" "ISI" "MTI"
+    "SAS" "SCPD" "SPF"
+    "SRIC" "SSA"
+)
+
+###############################################################################
+# Overall statistics (Bachelor + Master)
+###############################################################################
+
+total=$(ls -1q "$input"/{L,M}-*.json | wc -l)
+total_non_zero=$(find "$input" -name [LM]-*.json -size +"$limit"c | wc -l)
+total_generic=$(grep -lr "Generic GENERIC" "$input"/[LM]-*.json 2> /dev/null | wc -l)
+total_known=$((total_non_zero-total_generic))
+
 echo "\"total\",\"$total\""
 echo "\"total (non-zero)\",\"$total_non_zero\""
 echo "\"total (titular)\",\"$total_known\""
@@ -19,18 +39,23 @@ echo "\"total (titular)\",\"$total_known\""
 cti=0
 cti_non_zero=0
 cti_generic=0
-for series in "CA" "CB" "CC" "CD" "C1" "C2" "C3" "C4" "Tehnologia informaţiei" "CTI" "AAC" "ABD" "eGuv" "G" "GMRV" "IA" "ISI" "MTI" "SAS" "SCPD" "SPF" "SRIC" "SSA"; do
-    num=$(ls -1q "$in"/[LM]-*-*-*-"$series".json 2> /dev/null | wc -l)
-    cti=$(($cti+$num))
-    num_generic=$(grep -lr "Generic GENERIC" "$in"/[LM]-*-*-*-"$series".json 2> /dev/null | wc -l)
-    cti_generic=$(($cti_generic+$num_generic))
-    num_non_zero=$(find "$in" -name [LM]-*-*-*-"$series".json -size +"$limit"c | wc -l)
-    cti_non_zero=$(($cti_non_zero+$num_non_zero))
+
+for series in "${cti_series[@]}"; do
+    num=$(ls -1q "$input"/[LM]-*-*-*-"$series".json 2> /dev/null | wc -l)
+    cti=$((cti+num))
+
+    num_generic=$(grep -lr "Generic GENERIC" "$input"/[LM]-*-*-*-"$series".json 2> /dev/null | wc -l)
+    cti_generic=$((cti_generic+num_generic))
+
+    num_non_zero=$(find "$input" -name [LM]-*-*-*-"$series".json -size +"$limit"c | wc -l)
+    cti_non_zero=$((cti_non_zero+num_non_zero))
 done
-is=$(($total-$cti))
-is_non_zero=$(($total_non_zero-$cti_non_zero))
-cti_known=$(($cti_non_zero-$cti_generic))
-is_known=$(($total_known-$cti_known))
+
+is=$((total-cti))
+is_non_zero=$((total_non_zero-cti_non_zero))
+cti_known=$((cti_non_zero-cti_generic))
+is_known=$((total_known-cti_known))
+
 echo "\"total CTI\",\"$cti\""
 echo "\"total CTI (non-zero)\",\"$cti_non_zero\""
 echo "\"total CTI (titular)\",\"$cti_known\""
@@ -38,11 +63,15 @@ echo "\"total IS\",\"$is\""
 echo "\"total IS (non-zero)\",\"$is_non_zero\""
 echo "\"total IS (titular)\",\"$is_known\""
 
+###############################################################################
+# Bachelor statistics
+###############################################################################
 
-total=$(ls -1q "$in"/L-*.json | wc -l)
-total_non_zero=$(find "$in" -name L-*.json -size +"$limit"c | wc -l)
-total_generic=$(grep -lr "Generic GENERIC" "$in"/L-*.json 2> /dev/null | wc -l)
-total_known=$(($total_non_zero-$total_generic))
+total=$(ls -1q "$input"/L-*.json | wc -l)
+total_non_zero=$(find "$input" -name L-*.json -size +"$limit"c | wc -l)
+total_generic=$(grep -lr "Generic GENERIC" "$input"/L-*.json 2> /dev/null | wc -l)
+total_known=$((total_non_zero-total_generic))
+
 echo "\"total L-ACS\",\"$total\""
 echo "\"total L-ACS (non-zero)\",\"$total_non_zero\""
 echo "\"total L-ACS (titular)\",\"$total_known\""
@@ -50,18 +79,23 @@ echo "\"total L-ACS (titular)\",\"$total_known\""
 cti=0
 cti_non_zero=0
 cti_generic=0
-for series in "CA" "CB" "CC" "CD" "C1" "C2" "C3" "C4" "Tehnologia informaţiei" "CTI" "AAC" "ABD" "eGuv" "G" "GMRV" "IA" "ISI" "MTI" "SAS" "SCPD" "SPF" "SRIC" "SSA"; do
-    num=$(ls -1q "$in"/L-*-*-*-"$series".json 2> /dev/null | wc -l)
-    cti=$(($cti+$num))
-    num_generic=$(grep -lr "Generic GENERIC" "$in"/L-*-*-*-"$series".json 2> /dev/null | wc -l)
-    cti_generic=$(($cti_generic+$num_generic))
-    num_non_zero=$(find "$in" -name L-*-*-*-"$series".json -size +"$limit"c | wc -l)
-    cti_non_zero=$(($cti_non_zero+$num_non_zero))
+
+for series in "${cti_series[@]}"; do
+    num=$(ls -1q "$input"/L-*-*-*-"$series".json 2> /dev/null | wc -l)
+    cti=$((cti+num))
+
+    num_generic=$(grep -lr "Generic GENERIC" "$input"/L-*-*-*-"$series".json 2> /dev/null | wc -l)
+    cti_generic=$((cti_generic+num_generic))
+
+    num_non_zero=$(find "$input" -name L-*-*-*-"$series".json -size +"$limit"c | wc -l)
+    cti_non_zero=$((cti_non_zero+num_non_zero))
 done
-is=$(($total-$cti))
-is_non_zero=$(($total_non_zero-$cti_non_zero))
-cti_known=$(($cti_non_zero-$cti_generic))
-is_known=$(($total_known-$cti_known))
+
+is=$((total-cti))
+is_non_zero=$((total_non_zero-cti_non_zero))
+cti_known=$((cti_non_zero-cti_generic))
+is_known=$((total_known-cti_known))
+
 echo "\"total L-CTI\",\"$cti\""
 echo "\"total L-CTI (non-zero)\",\"$cti_non_zero\""
 echo "\"total L-CTI (titular)\",\"$cti_known\""
@@ -69,11 +103,15 @@ echo "\"total L-IS\",\"$is\""
 echo "\"total L-IS (non-zero)\",\"$is_non_zero\""
 echo "\"total L-IS (titular)\",\"$is_known\""
 
+###############################################################################
+# Master statistics
+###############################################################################
 
-total=$(ls -1q "$in"/M-*.json | wc -l)
-total_non_zero=$(find "$in" -name M-*.json -size +"$limit"c | wc -l)
-total_generic=$(grep -lr "Generic GENERIC" "$in"/M-*.json 2> /dev/null | wc -l)
-total_known=$(($total_non_zero-$total_generic))
+total=$(ls -1q "$input"/M-*.json | wc -l)
+total_non_zero=$(find "$input" -name M-*.json -size +"$limit"c | wc -l)
+total_generic=$(grep -lr "Generic GENERIC" "$input"/M-*.json 2> /dev/null | wc -l)
+total_known=$((total_non_zero-total_generic))
+
 echo "\"total M-ACS\",\"$total\""
 echo "\"total M-ACS (non-zero)\",\"$total_non_zero\""
 echo "\"total M-ACS (titular)\",\"$total_known\""
@@ -81,18 +119,23 @@ echo "\"total M-ACS (titular)\",\"$total_known\""
 cti=0
 cti_non_zero=0
 cti_generic=0
-for series in "CA" "CB" "CC" "CD" "C1" "C2" "C3" "C4" "Tehnologia informaţiei" "CTI" "AAC" "ABD" "eGuv" "G" "GMRV" "IA" "ISI" "MTI" "SAS" "SCPD" "SPF" "SRIC" "SSA"; do
-    num=$(ls -1q "$in"/M-*-*-*-"$series".json 2> /dev/null | wc -l)
-    cti=$(($cti+$num))
-    num_generic=$(grep -lr "Generic GENERIC" "$in"/M-*-*-*-"$series".json 2> /dev/null | wc -l)
-    cti_generic=$(($cti_generic+$num_generic))
-    num_non_zero=$(find "$in" -name M-*-*-*-"$series".json -size +"$limit"c | wc -l)
-    cti_non_zero=$(($cti_non_zero+$num_non_zero))
+
+for series in "${cti_series[@]}"; do
+    num=$(ls -1q "$input"/M-*-*-*-"$series".json 2> /dev/null | wc -l)
+    cti=$((cti+num))
+
+    num_generic=$(grep -lr "Generic GENERIC" "$input"/M-*-*-*-"$series".json 2> /dev/null | wc -l)
+    cti_generic=$((cti_generic+num_generic))
+
+    num_non_zero=$(find "$input" -name M-*-*-*-"$series".json -size +"$limit"c | wc -l)
+    cti_non_zero=$((cti_non_zero+num_non_zero))
 done
-is=$(($total-$cti))
-is_non_zero=$(($total_non_zero-$cti_non_zero))
-cti_known=$(($cti_non_zero-$cti_generic))
-is_known=$(($total_known-$cti_known))
+
+is=$((total-cti))
+is_non_zero=$((total_non_zero-cti_non_zero))
+cti_known=$((cti_non_zero-cti_generic))
+is_known=$((total_known-cti_known))
+
 echo "\"total M-CTI\",\"$cti\""
 echo "\"total M-CTI (non-zero)\",\"$cti_non_zero\""
 echo "\"total M-CTI (titular)\",\"$cti_known\""
@@ -100,29 +143,47 @@ echo "\"total M-IS\",\"$is\""
 echo "\"total M-IS (non-zero)\",\"$is_non_zero\""
 echo "\"total M-IS (titular)\",\"$is_known\""
 
-for init in "L-A1-S1" "L-A1-S2" "L-A2-S1" "L-A2-S2" "L-A3-S1" "L-A3-S2" "L-A4-S1" "L-A4-S2" "M-A1-S1" "M-A1-S2" "M-A2-S1" "M-A2-S2"; do
-    total=$(ls -1q "$in"/"$init"-*.json | wc -l)
-    total_non_zero=$(find "$in" -name "$init"-*.json -size +"$limit"c | wc -l)
-    total_generic=$(grep -rl "Generic GENERIC" "$in"/"$init"-*.json 2> /dev/null | wc -l)
-    total_known=$(($total_non_zero-$total_generic))
+###############################################################################
+# Per year / semester statistics
+###############################################################################
+
+for init in \
+    "L-A1-S1" "L-A1-S2" \
+    "L-A2-S1" "L-A2-S2" \
+    "L-A3-S1" "L-A3-S2" \
+    "L-A4-S1" "L-A4-S2" \
+    "M-A1-S1" "M-A1-S2" \
+    "M-A2-S1" "M-A2-S2"
+do
+    total=$(ls -1q "$input"/"$init"-*.json | wc -l)
+    total_non_zero=$(find "$input" -name "$init"-*.json -size +"$limit"c | wc -l)
+    total_generic=$(grep -rl "Generic GENERIC" "$input"/"$init"-*.json 2> /dev/null | wc -l)
+    total_known=$((total_non_zero-total_generic))
+
     echo "\"$init\",\"$total\""
     echo "\"$init (non-zero)\",\"$total_non_zero\""
     echo "\"$init (titular)\",\"$total_known\""
+
     cti=0
     cti_non_zero=0
     cti_generic=0
-    for series in "CA" "CB" "CC" "CD" "C1" "C2" "C3" "C4" "Tehnologia informaţiei" "CTI" "AAC" "ABD" "eGuv" "G" "GMRV" "IA" "ISI" "MTI" "SAS" "SCPD" "SPF" "SRIC" "SSA"; do
-        num=$(ls -1q "$in"/"$init"-*-"$series".json 2> /dev/null | wc -l)
-        cti=$(($cti+$num))
-        num_generic=$(grep -lr "Generic GENERIC" "$in"/"$init"-*-"$series".json 2> /dev/null | wc -l)
-        cti_generic=$(($cti_generic+$num_generic))
-        num_non_zero=$(find "$in" -name "$init"-*-"$series".json -size +"$limit"c | wc -l)
-        cti_non_zero=$(($cti_non_zero+$num_non_zero))
+
+    for series in "${cti_series[@]}"; do
+        num=$(ls -1q "$input"/"$init"-*-"$series".json 2> /dev/null | wc -l)
+        cti=$((cti+num))
+
+        num_generic=$(grep -lr "Generic GENERIC" "$input"/"$init"-*-"$series".json 2> /dev/null | wc -l)
+        cti_generic=$((cti_generic+num_generic))
+
+        num_non_zero=$(find "$input" -name "$init"-*-"$series".json -size +"$limit"c | wc -l)
+        cti_non_zero=$((cti_non_zero+num_non_zero))
     done
-    is=$(($total-$cti))
-    is_non_zero=$(($total_non_zero-$cti_non_zero))
-    cti_known=$(($cti_non_zero-$cti_generic))
-    is_known=$(($total_known-$cti_known))
+
+    is=$((total-cti))
+    is_non_zero=$((total_non_zero-cti_non_zero))
+    cti_known=$((cti_non_zero-cti_generic))
+    is_known=$((total_known-cti_known))
+
     echo "\"$init CTI\",\"$cti\""
     echo "\"$init CTI (non-zero)\",\"$cti_non_zero\""
     echo "\"$init CTI (titular)\",\"$cti_known\""

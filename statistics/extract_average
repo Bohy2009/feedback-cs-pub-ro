@@ -1,10 +1,23 @@
 #!/bin/bash
 
-if test $# -ne 1; then
-    echo "Usage: $0 <csv-processed-folder>" 1>&2
+# Extract the "Mediu" (Average) row from each processed CSV
+#
+# Usage:
+#   ./extract_average <csv-processed-folder>
+
+set -e
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <csv-processed-folder>" >&2
     exit 1
 fi
 
-in="$1"
+input_dir="$1"
 
-grep Mediu "$in"/*.csv | sed 's/^.*\/\(.*\)\.csv:"Mediu"/"\1"/g'
+if [ ! -d "$input_dir" ]; then
+    echo "Error: '$input_dir' is not a directory." >&2
+    exit 1
+fi
+
+grep 'Mediu' "$input_dir"/*.csv \
+    | sed 's|^.*/\(.*\)\.csv:"Mediu"|"\\1"|'
