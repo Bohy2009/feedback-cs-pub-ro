@@ -1,18 +1,21 @@
 #!/bin/bash
 
-if test $# -ne 1; then
-    echo "Usage: $0 <folder with .json files>" 1>&2
+# Check that the input directory was provided.
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <folder with .json files>" >&2
     exit 1
 fi
 
 in="$1"
 
-if test ! -d "$in"; then
-    echo "Error: Folder $in does not exist or is not a folder." 1>&2
+# Verify that the input directory exists.
+if [ ! -d "$in" ]; then
+    echo "Error: Folder $in does not exist or is not a directory." >&2
     exit 1
 fi
 
+# Extract username, full name, and email from every JSON file.
 IFS=$'\n'
 for i in "$in"/*.json; do
-    cat "$i" | jq -r '.[] | [.username,.fullname,.email] | @csv'
+    jq -r '.[] | [.username, .fullname, .email] | @csv' "$i"
 done | sort -u

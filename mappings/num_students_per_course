@@ -1,46 +1,54 @@
 #!/bin/bash
 
-if test $# -ne 2; then
-    echo "Usage: $0 <folder with .json files> <output-separted-folder>" 1>&2
+# Check that the input and output directories were provided.
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <folder with .json files> <output-separated-folder>" >&2
     exit 1
 fi
 
 in="$1"
 out="$2"
-cti="$2"/cti/
-is="$2"/is/
+cti="$out/cti"
+is="$out/is"
 
-if test ! -d "$in"; then
-    echo "Error: Folder $in does not exist or is not a folder." 1>&2
+# Verify that the input directory exists.
+if [ ! -d "$in" ]; then
+    echo "Error: Folder $in does not exist or is not a directory." >&2
     exit 1
 fi
 
-if test ! -d "$out"; then
-    echo "Error: Argument $out (output) is not a folder." 1>&2
+# Verify that the output directory exists.
+if [ ! -d "$out" ]; then
+    echo "Error: Output folder $out does not exist." >&2
     exit 1
 fi
 
-if test ! -d "$cti"; then
-    echo "Error: $cti folder does not exist. Please create it beforehand." 1>&2
+# Verify that the CTI output directory exists.
+if [ ! -d "$cti" ]; then
+    echo "Error: Folder $cti does not exist. Please create it beforehand." >&2
     exit 1
 fi
 
-if test ! -d "$is"; then
-    echo "Error: $is subfolder does not exist. Please create it beforehand." 1>&2
+# Verify that the IS output directory exists.
+if [ ! -d "$is" ]; then
+    echo "Error: Folder $is does not exist. Please create it beforehand." >&2
     exit 1
 fi
 
+# Count the number of students for every course.
 IFS=$'\n'
 for i in "$in"/*.json; do
     num=$(cat "$i" | jq -r '.[] | [.roles[0].shortname] | @csv' | grep '"student"$' | wc -l)
     echo "\"$(basename "$i" _users.json)\",\"$num\""
-done > "$out"/num_users.csv
+done > "$out/num_users.csv"
 
+# Count the number of students for CTI courses.
 IFS=$'\n'
 for i in "$in"/*.json; do
     base="$(basename "$i" _users.json)"
     num=$(cat "$i" | jq -r '.[] | [.roles[0].shortname] | @csv' | grep '"student"$' | wc -l)
     found=0
+
     for series in "CA" "CB" "CC" "CD" "C1" "C2" "C3" "C4" "Tehnologia informaţiei" "CTI" "AAC" "ABD" "eGuv" "G" "GMRV" "IA" "ISI" "MTI" "SAS" "SCPD" "SPF" "SRIC" "SSA" "EGOV"; do
         if [[ "$base" =~ [LM]-A[1-4]-S[1-2]-.*-"$series"$ ]]; then
             found=1
@@ -53,16 +61,19 @@ for i in "$in"/*.json; do
             fi
         fi
     done
-    if test "$found" -ne 0; then
-        echo "\"$(basename "$i" _users.json)\",\"$num\""
-    fi
-done > "$cti"/num_users.csv
 
+    if [ "$found" -ne 0 ]; then
+        echo "\"$base\",\"$num\""
+    fi
+done > "$cti/num_users.csv"
+
+# Count the number of students for IS courses.
 IFS=$'\n'
 for i in "$in"/*.json; do
     base="$(basename "$i" _users.json)"
     num=$(cat "$i" | jq -r '.[] | [.roles[0].shortname] | @csv' | grep '"student"$' | wc -l)
     found=0
+
     for series in "CA" "CB" "CC" "CD" "C1" "C2" "C3" "C4" "Tehnologia informaţiei" "CTI" "AAC" "ABD" "eGuv" "G" "GMRV" "IA" "ISI" "MTI" "SAS" "SCPD" "SPF" "SRIC" "SSA" "EGOV"; do
         if [[ "$base" =~ [LM]-A[1-4]-S[1-2]-.*-"$series"$ ]]; then
             found=1
@@ -75,7 +86,8 @@ for i in "$in"/*.json; do
             fi
         fi
     done
-    if test "$found" -eq 0; then
-        echo "\"$(basename "$i" _users.json)\",\"$num\""
+
+    if [ "$found" -eq 0 ]; then
+        echo "\"$base\",\"$num\""
     fi
-done > "$is"/num_users.csv
+done > "$is/num_users.csv"
