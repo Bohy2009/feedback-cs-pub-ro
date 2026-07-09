@@ -1,64 +1,155 @@
-#!/usr/bin/env python
-
-import sys
+#!/usr/bin/env python3
 import csv
+import sys
+from collections import defaultdict
+
+"""
+summarize_per_semester.py
+
+Reads the raw feedback CSV file and generates summary statistics grouped by:
+
+    • Academic year (e.g. L-A1, M-A2)
+    • Semester (e.g. L-A1-S1, M-A2-S2)
+
+Input:
+    raw.csv
+
+Output (stdout):
+    CSV containing:
+        - Academic year / semester
+        - Number of courses
+        - Total feedback
+        - Feedback percentage
+        - Number of users
+        - Average evaluation
+
+Usage:
+    ./summarize_per_semester.py <raw-feedback-csv-file>
+"""
+
+# Aggregation prefixes
+YEAR_GROUPS = [
+    "L-A1",
+    "L-A2",
+    "L-A3",
+    "L-A4",
+    "M-A1",
+    "M-A2",
+]
+
+SEMESTER_GROUPS = [
+    "L-A1-S1",
+    "L-A1-S2",
+    "L-A2-S1",
+    "L-A2-S2",
+    "L-A3-S1",
+    "L-A3-S2",
+    "L-A4-S1",
+    "L-A4-S2",
+    "M-A1-S1",
+    "M-A1-S2",
+    "M-A2-S1",
+    "M-A2-S2",
+]
+
+
+def load_feedback(filename):
+    """
+    Load the raw feedback CSV into memory.
+    """
+    data = {}
+
+    with open(filename, "r", newline="") as csvfile:
+        reader = csv.reader(csvfile)
+
+        for row in reader:
+            data[row[0]] = {
+                "num": int(row[2]),
+                "users": int(row[4]),
+                "val": float(row[5]),
+            }
+
+    return data
+
+
+def aggregate(data, groups):
+    """
+    Aggregate statistics for the supplied grouping prefixes.
+
+    Args:
+        data: Parsed feedback data.
+        groups: List of prefixes to aggregate.
+
+    Returns:
+        Dictionary containing aggregated statistics.
+    """
+    results = defaultdict(lambda: {
+        "count": 0,
+        "num": 0,
+        "users": 0,
+        "val": 0.0,
+    })
+
+    for course_name, stats in data.items():
+        for group in groups:
+            if course_name.startswith(group):
+                summary = results[group]
+
+                summary["count"] += 1
+                summary["num"] += stats["num"]
+                summary["users"] += stats["users"]
+
+                # Weighted sum used later to compute the average rating.
+                summary["val"] += stats["val"] * stats["num"]
+
+    return results
+
+
+def print_results(results):
+    """Write the aggregated CSV to stdout."""
+
+    print(
+        '"an/sem","num_cursuri","num_feedback","proc_feedback","num_utilizatori","evaluare"'
+    )
+
+    for group, summary in results.items():
+        percentage = (
+            100 * summary["num"] / summary["users"]
+            if summary["users"]
+            else 0
+        )
+
+        average = (
+            summary["val"] / summary["num"]
+            if summary["num"]
+            else 0
+        )
+
+        print(
+            f'"{group}",'
+            f'"{summary["count"]}",'
+            f'"{summary["num"]}",'
+            f'"{percentage:.2f}",'
+            f'"{summary["users"]}",'
+            f'"{average:.2f}"'
+        )
 
 
 def main():
+    """Program entry point."""
+
     if len(sys.argv) != 2:
-        sys.stderr.write("Usage: {} <raw-feedback-csv-file>\n".format(sys.argv[0]))
-        sys.exit(1)
+        print(f"Usage: {sys.argv[0]} <raw-feedback-csv-file>", file=sys.stderr)
+        return 1
 
-    d = {}
-    csvfile = open(sys.argv[1], "rt")
-    reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    for row in reader:
-        d[row[0]] = {
-                "num": int(row[2]),
-                "perc": float(row[3]),
-                "users": int(row[4]),
-                "val": float(row[5])
-                }
-    csvfile.close()
+    data = load_feedback(sys.argv[1])
 
-    sems = ["L-A1", "L-A2", "L-A3", "L-A4", "M-A1", "M-A2"]
-    res = {}
-    for s in sems:
-        for k in d.keys():
-            if k.startswith(s):
-                if s in res.keys():
-                    res[s]["count"] += 1
-                    res[s]["num"] += d[k]["num"]
-                    res[s]["users"] += d[k]["users"]
-                    res[s]["val"] += d[k]["val"] * d[k]["num"]
-                else:
-                    res[s] = {
-                            "count": 1,
-                            "num": d[k]["num"],
-                            "users": d[k]["users"],
-                            "val": d[k]["val"] * d[k]["num"]
-                            }
+    results = aggregate(data, YEAR_GROUPS)
+    results.update(aggregate(data, SEMESTER_GROUPS))
 
-    sems = ["L-A1-S1", "L-A1-S2", "L-A2-S1", "L-A2-S2", "L-A3-S1", "L-A3-S2", "L-A4-S1", "L-A4-S2", "M-A1-S1", "M-A1-S2", "M-A2-S1", "M-A2-S2"]
-    for s in sems:
-        for k in d.keys():
-            if k.startswith(s):
-                if s in res.keys():
-                    res[s]["count"] += 1
-                    res[s]["num"] += d[k]["num"]
-                    res[s]["users"] += d[k]["users"]
-                    res[s]["val"] += d[k]["val"] * d[k]["num"]
-                else:
-                    res[s] = {
-                            "count": 1,
-                            "num": d[k]["num"],
-                            "users": d[k]["users"],
-                            "val": d[k]["val"] * d[k]["num"]
-                            }
+    print_results(results)
 
-    print("\"an/sem\",\"num_cursuri\",\"num_feedback\",\"proc_feedback\",\"num_utilizatori\",\"evaluare\"")
-    for s in res.keys():
-        print("\"{}\",\"{:d}\",\"{:d}\",\"{:4.2f}\",\"{:d}\",\"{:3.2f}\"".format(s, res[s]["count"], res[s]["num"], 100.0 * res[s]["num"] / res[s]["users"], res[s]["users"], res[s]["val"] / res[s]["num"]))
+    return 0
 
 
 if __name__ == "__main__":

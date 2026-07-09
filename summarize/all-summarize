@@ -1,28 +1,58 @@
 #!/bin/bash
 
-if test $# -ne 1; then
-    echo "Usage: $0 <top-folder>" 1>&2
+# -----------------------------------------------------------------------------
+# all-summarize
+#
+# Runs all summary generation scripts for every dataset contained in the
+# specified project directory.
+#
+# Usage:
+#   ./all-summarize <top-folder>
+#
+# Generated files:
+#   per_series.csv
+#   per_semester.csv
+#   common.csv
+#   prof.csv
+# -----------------------------------------------------------------------------
+
+set -e
+
+# Validate arguments.
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <top-folder>" >&2
     exit 1
 fi
 
-top="$1"
+TOP="$1"
 
-if test ! -d "$top"; then
-    echo "Error: Folder $top does not exist or is not a folder." 1>&2
+# Ensure the supplied directory exists.
+if [ ! -d "$TOP" ]; then
+    echo "Error: '$TOP' does not exist or is not a directory." >&2
     exit 1
 fi
 
-./summarize_per_series.py "$top"/mapping/num_feedbacks/raw.csv > "$top"/mapping/num_feedbacks/per_series.csv
-./summarize_per_semester.py "$top"/mapping/num_feedbacks/raw.csv > "$top"/mapping/num_feedbacks/per_semester.csv
-./summarize_common.py "$top"/mapping/num_feedbacks/raw.csv > "$top"/mapping/num_feedbacks/common.csv
-./summarize_prof.py "$top"/mapping/num_feedbacks/raw.csv > "$top"/mapping/num_feedbacks/prof.csv
+# List of datasets to summarize.
+DATASETS=(
+    "mapping"
+    "mapping/cti"
+    "mapping/is"
+)
 
-./summarize_per_series.py "$top"/mapping/cti/num_feedbacks/raw.csv > "$top"/mapping/cti/num_feedbacks/per_series.csv
-./summarize_per_semester.py "$top"/mapping/cti/num_feedbacks/raw.csv > "$top"/mapping/cti/num_feedbacks/per_semester.csv
-./summarize_common.py "$top"/mapping/cti/num_feedbacks/raw.csv > "$top"/mapping/cti/num_feedbacks/common.csv
-./summarize_prof.py "$top"/mapping/cti/num_feedbacks/raw.csv > "$top"/mapping/cti/num_feedbacks/prof.csv
+# Generate every summary for each dataset.
+for dataset in "${DATASETS[@]}"; do
+    INPUT="$TOP/$dataset/num_feedbacks/raw.csv"
+    OUTPUT_DIR="$TOP/$dataset/num_feedbacks"
 
-./summarize_per_series.py "$top"/mapping/is/num_feedbacks/raw.csv > "$top"/mapping/is/num_feedbacks/per_series.csv
-./summarize_per_semester.py "$top"/mapping/is/num_feedbacks/raw.csv > "$top"/mapping/is/num_feedbacks/common.csv
-./summarize_common.py "$top"/mapping/is/num_feedbacks/raw.csv > "$top"/mapping/is/num_feedbacks/common.csv
-./summarize_prof.py "$top"/mapping/is/num_feedbacks/raw.csv > "$top"/mapping/is/num_feedbacks/prof.csv
+    ./summarize_per_series.py "$INPUT" \
+        > "$OUTPUT_DIR/per_series.csv"
+
+    ./summarize_per_semester.py "$INPUT" \
+        > "$OUTPUT_DIR/per_semester.csv"
+
+    ./summarize_common.py "$INPUT" \
+        > "$OUTPUT_DIR/common.csv"
+
+    ./summarize_prof.py "$INPUT" \
+        > "$OUTPUT_DIR/prof.csv"
+done
