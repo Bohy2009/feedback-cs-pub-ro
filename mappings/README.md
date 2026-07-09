@@ -1,4 +1,3 @@
-
 # Feedback Processing Scripts
 
 The scripts are designed to be executed through the `all-mappings` script, which runs the entire processing pipeline in the correct order.
@@ -15,4 +14,3 @@ The pipeline consists of the following steps:
 
 ```bash
 ./all-mappings <top-folder>
-
