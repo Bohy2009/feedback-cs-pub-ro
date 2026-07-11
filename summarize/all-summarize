@@ -44,6 +44,10 @@ for dataset in "${DATASETS[@]}"; do
     INPUT="$TOP/$dataset/num_feedbacks/raw.csv"
     OUTPUT_DIR="$TOP/$dataset/num_feedbacks"
 
+    if [ ! -f "$INPUT" ]; then
+        echo "Warning: missing input '$INPUT'; skipping '$dataset'." >&2
+        continue
+    fi
     ./summarize_per_series.py "$INPUT" \
         > "$OUTPUT_DIR/per_series.csv"
 
