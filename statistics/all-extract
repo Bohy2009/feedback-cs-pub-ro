@@ -56,8 +56,8 @@ extract_course_staff() {
     > "$output/asist_courses.csv"
 
     for file in "$raw_dir"/*.csv; do
+        local course
         course=$(basename "$file" .csv)
-
         sed -n '/^"Titulari Curs"/,/^"Total:"/p' "$file" \
             | tail -n +2 \
             | head -n -1 \
