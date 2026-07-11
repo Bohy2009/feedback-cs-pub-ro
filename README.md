@@ -24,10 +24,10 @@ The repository contains two related components:
 | `statistics/` | Statistical analysis scripts. |
 | `summarize/` | Scripts for generating summary reports. |
 | `create_folder_structure` | Creates the directory structure required by the processing pipeline. |
-| `create_faculty_structure` | Creates faculty-specific directory structures. |
-| `create_upb_structure` | Creates the directory structure for UPB-wide processing. |
-| `pack_structure` | Packages generated files into an archive. |
-| `pack_structure_upb` | Packages UPB-specific output files into an archive. |
+| `create_faculty_structure` | Creates faculty-specific directory structures(unique to the **upb** branch). |
+| `create_upb_structure` | Creates the directory structure for UPB-wide processing(unique to the **upb** branch). |
+| `pack_structure` | Packages generated files into an archive(unique to the **upb** branch). |
+| `pack_structure_upb` | Packages UPB-specific output files into an archive(unique to the **upb** branch). |
 
 
 ---
@@ -181,7 +181,7 @@ The `process-feedback` directory contains three main scripts:
 |--------|-------------|
 | `xls2csv.sh` | Converts `.xls` feedback files into `.csv` files. |
 | `process_feedback.py` | Processes feedback data and generates statistical results. |
-| `csv2xls.sh` | Converts processed `.csv` files back into `.xls` format. |
+| `csv2xls.sh` | Converts processed `.csv` files back into `.xls` format(unique to the **upb** branch). |
 
 ---
 
@@ -249,13 +249,13 @@ containing the calculated feedback statistics.
 ## 3. Convert Results Back to Excel
 
 ```bash
-./csv2xls.sh so2/
+./csv2xls.sh so2/ so2/
 ```
 
 This converts the processed CSV file into:
 
 ```text
-*-prelucrat.xls
+    *-prelucrat.xls
 ```
 
 ---
